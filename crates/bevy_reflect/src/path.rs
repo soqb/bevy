@@ -1,6 +1,6 @@
 use std::num::ParseIntError;
 
-use crate::{Array, Reflect, ReflectMut, ReflectRef, VariantType};
+use crate::{Array, PartialReflect, ReflectMut, ReflectRef, VariantType};
 use thiserror::Error;
 
 /// An error returned from a failed path string query.
@@ -56,7 +56,7 @@ pub trait GetPath {
     ///
     /// To retrieve a statically typed reference, use
     /// [`get_path`][GetPath::get_path].
-    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn Reflect, ReflectPathError<'p>>;
+    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>>;
 
     /// Returns a mutable reference to the value specified by `path`.
     ///
@@ -65,10 +65,10 @@ pub trait GetPath {
     fn path_mut<'r, 'p>(
         &'r mut self,
         path: &'p str,
-    ) -> Result<&'r mut dyn Reflect, ReflectPathError<'p>>;
+    ) -> Result<&'r mut dyn PartialReflect, ReflectPathError<'p>>;
 
     /// Returns a statically typed reference to the value specified by `path`.
-    fn get_path<'r, 'p, T: Reflect>(
+    fn get_path<'r, 'p, T: PartialReflect>(
         &'r self,
         path: &'p str,
     ) -> Result<&'r T, ReflectPathError<'p>> {
@@ -80,7 +80,7 @@ pub trait GetPath {
 
     /// Returns a statically typed mutable reference to the value specified by
     /// `path`.
-    fn get_path_mut<'r, 'p, T: Reflect>(
+    fn get_path_mut<'r, 'p, T: PartialReflect>(
         &'r mut self,
         path: &'p str,
     ) -> Result<&'r mut T, ReflectPathError<'p>> {
@@ -91,23 +91,23 @@ pub trait GetPath {
     }
 }
 
-impl<T: Reflect> GetPath for T {
-    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn Reflect, ReflectPathError<'p>> {
-        (self as &dyn Reflect).path(path)
+impl<T: PartialReflect> GetPath for T {
+    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>> {
+        (self as &dyn PartialReflect).path(path)
     }
 
     fn path_mut<'r, 'p>(
         &'r mut self,
         path: &'p str,
-    ) -> Result<&'r mut dyn Reflect, ReflectPathError<'p>> {
-        (self as &mut dyn Reflect).path_mut(path)
+    ) -> Result<&'r mut dyn PartialReflect, ReflectPathError<'p>> {
+        (self as &mut dyn PartialReflect).path_mut(path)
     }
 }
 
-impl GetPath for dyn Reflect {
-    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn Reflect, ReflectPathError<'p>> {
+impl GetPath for dyn PartialReflect {
+    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>> {
         let mut index = 0;
-        let mut current: &dyn Reflect = self;
+        let mut current: &dyn PartialReflect = self;
         while let Some(token) = next_token(path, &mut index) {
             let current_index = index;
             match token {
@@ -167,9 +167,9 @@ impl GetPath for dyn Reflect {
     fn path_mut<'r, 'p>(
         &'r mut self,
         path: &'p str,
-    ) -> Result<&'r mut dyn Reflect, ReflectPathError<'p>> {
+    ) -> Result<&'r mut dyn PartialReflect, ReflectPathError<'p>> {
         let mut index = 0;
-        let mut current: &mut dyn Reflect = self;
+        let mut current: &mut dyn PartialReflect = self;
         while let Some(token) = next_token(path, &mut index) {
             let current_index = index;
             match token {
@@ -231,7 +231,7 @@ fn read_array_entry<'r, 'p, T>(
     list: &'r T,
     value: &'p str,
     current_index: usize,
-) -> Result<&'r dyn Reflect, ReflectPathError<'p>>
+) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>>
 where
     T: Array + ?Sized,
 {
@@ -247,7 +247,7 @@ fn read_array_entry_mut<'r, 'p, T>(
     list: &'r mut T,
     value: &'p str,
     current_index: usize,
-) -> Result<&'r mut dyn Reflect, ReflectPathError<'p>>
+) -> Result<&'r mut dyn PartialReflect, ReflectPathError<'p>>
 where
     T: Array + ?Sized,
 {
@@ -260,10 +260,10 @@ where
 }
 
 fn read_field<'r, 'p>(
-    current: &'r dyn Reflect,
+    current: &'r dyn PartialReflect,
     field: &'p str,
     current_index: usize,
-) -> Result<&'r dyn Reflect, ReflectPathError<'p>> {
+) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>> {
     match current.reflect_ref() {
         ReflectRef::Struct(reflect_struct) => {
             Ok(reflect_struct
@@ -312,10 +312,10 @@ fn read_field<'r, 'p>(
 }
 
 fn read_field_mut<'r, 'p>(
-    current: &'r mut dyn Reflect,
+    current: &'r mut dyn PartialReflect,
     field: &'p str,
     current_index: usize,
-) -> Result<&'r mut dyn Reflect, ReflectPathError<'p>> {
+) -> Result<&'r mut dyn PartialReflect, ReflectPathError<'p>> {
     match current.reflect_mut() {
         ReflectMut::Struct(reflect_struct) => {
             Ok(reflect_struct

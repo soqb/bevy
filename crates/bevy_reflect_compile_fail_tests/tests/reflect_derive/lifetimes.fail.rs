@@ -1,4 +1,4 @@
-use bevy_reflect::Reflect;
+use bevy_reflect::PartialReflect;
 
 #[derive(Reflect)]
 struct Foo<'a> {
