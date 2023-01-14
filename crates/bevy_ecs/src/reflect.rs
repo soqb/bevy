@@ -95,7 +95,12 @@ impl ReflectComponent {
     /// # Panics
     ///
     /// Panics if the `entity` does not exist.
-    pub fn apply_or_insert(&self, world: &mut World, entity: Entity, component: &dyn PartialReflect) {
+    pub fn apply_or_insert(
+        &self,
+        world: &mut World,
+        entity: Entity,
+        component: &dyn PartialReflect,
+    ) {
         (self.0.apply_or_insert)(world, entity, component);
     }
 
@@ -383,7 +388,11 @@ impl<C: Resource + PartialReflect + FromWorld> FromType<C> for ReflectResource {
             remove: |world| {
                 world.remove_resource::<C>();
             },
-            reflect: |world| world.get_resource::<C>().map(|res| res as &dyn PartialReflect),
+            reflect: |world| {
+                world
+                    .get_resource::<C>()
+                    .map(|res| res as &dyn PartialReflect)
+            },
             reflect_unchecked_mut: |world| {
                 // SAFETY: all usages of `reflect_unchecked_mut` guarantee that there is either a single mutable
                 // reference or multiple immutable ones alive at any given point
