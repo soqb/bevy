@@ -1,6 +1,6 @@
 use std::num::ParseIntError;
 
-use crate::{Array, PartialReflect, ReflectMut, ReflectRef, VariantType};
+use crate::{Array, PartialReflect, Reflect, ReflectMut, ReflectRef, VariantType};
 use thiserror::Error;
 
 /// An error returned from a failed path string query.
@@ -71,24 +71,24 @@ pub trait GetPath {
     ) -> Result<&'r mut dyn PartialReflect, ReflectPathError<'p>>;
 
     /// Returns a statically typed reference to the value specified by `path`.
-    fn get_path<'r, 'p, T: PartialReflect>(
+    fn get_path<'r, 'p, T: Reflect>(
         &'r self,
         path: &'p str,
     ) -> Result<&'r T, ReflectPathError<'p>> {
         self.path(path).and_then(|p| {
-            p.downcast_ref::<T>()
+            p.try_downcast_ref::<T>()
                 .ok_or(ReflectPathError::InvalidDowncast)
         })
     }
 
     /// Returns a statically typed mutable reference to the value specified by
     /// `path`.
-    fn get_path_mut<'r, 'p, T: PartialReflect>(
+    fn get_path_mut<'r, 'p, T: Reflect>(
         &'r mut self,
         path: &'p str,
     ) -> Result<&'r mut T, ReflectPathError<'p>> {
         self.path_mut(path).and_then(|p| {
-            p.downcast_mut::<T>()
+            p.try_downcast_mut::<T>()
                 .ok_or(ReflectPathError::InvalidDowncast)
         })
     }
