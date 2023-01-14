@@ -56,7 +56,10 @@ pub trait GetPath {
     ///
     /// To retrieve a statically typed reference, use
     /// [`get_path`][GetPath::get_path].
-    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>>;
+    fn path<'r, 'p>(
+        &'r self,
+        path: &'p str,
+    ) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>>;
 
     /// Returns a mutable reference to the value specified by `path`.
     ///
@@ -92,7 +95,10 @@ pub trait GetPath {
 }
 
 impl<T: PartialReflect> GetPath for T {
-    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>> {
+    fn path<'r, 'p>(
+        &'r self,
+        path: &'p str,
+    ) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>> {
         (self as &dyn PartialReflect).path(path)
     }
 
@@ -105,7 +111,10 @@ impl<T: PartialReflect> GetPath for T {
 }
 
 impl GetPath for dyn PartialReflect {
-    fn path<'r, 'p>(&'r self, path: &'p str) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>> {
+    fn path<'r, 'p>(
+        &'r self,
+        path: &'p str,
+    ) -> Result<&'r dyn PartialReflect, ReflectPathError<'p>> {
         let mut index = 0;
         let mut current: &dyn PartialReflect = self;
         while let Some(token) = next_token(path, &mut index) {

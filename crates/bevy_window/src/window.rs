@@ -1,5 +1,5 @@
 use bevy_math::{DVec2, IVec2, UVec2, Vec2};
-use bevy_reflect::{std_traits::ReflectDefault, FromReflect, PartialReflect, Reflect};
+use bevy_reflect::{std_traits::ReflectDefault, FromReflect, Reflect};
 use bevy_utils::{tracing::warn, Uuid};
 
 #[cfg(feature = "serialize")]

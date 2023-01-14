@@ -32,16 +32,16 @@ pub(crate) fn impl_value(meta: &ReflectMeta) -> TokenStream {
         },
         bevy_reflect_path,
     );
-    
+
     let get_type_registration_impl = meta.get_type_registration();
-    
+
     let impl_full_reflect = impl_full_reflect(&meta);
 
     let (impl_generics, ty_generics, where_clause) = meta.generics().split_for_impl();
 
     TokenStream::from(quote! {
         #impl_full_reflect
-        
+
         #get_type_registration_impl
 
         #typed_impl
