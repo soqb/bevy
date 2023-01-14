@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, reflect::ReflectComponent};
-use bevy_reflect::Reflect;
+use bevy_reflect::{PartialReflect, Reflect};
 use bevy_reflect::{std_traits::ReflectDefault, FromReflect};
 use bevy_utils::AHasher;
 use std::{

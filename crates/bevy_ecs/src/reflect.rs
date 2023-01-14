@@ -8,7 +8,7 @@ use crate::{
     world::{unsafe_world_cell::UnsafeWorldCell, FromWorld, World},
 };
 use bevy_reflect::{
-    impl_from_reflect_value, impl_reflect_value, FromType, Reflect, ReflectDeserialize,
+    impl_from_reflect_value, impl_reflect_value, FromType, PartialReflect, ReflectDeserialize,
     ReflectSerialize,
 };
 
@@ -42,20 +42,20 @@ pub struct ReflectComponent(ReflectComponentFns);
 #[derive(Clone)]
 pub struct ReflectComponentFns {
     /// Function pointer implementing [`ReflectComponent::insert()`].
-    pub insert: fn(&mut World, Entity, &dyn Reflect),
+    pub insert: fn(&mut World, Entity, &dyn PartialReflect),
     /// Function pointer implementing [`ReflectComponent::apply()`].
-    pub apply: fn(&mut World, Entity, &dyn Reflect),
+    pub apply: fn(&mut World, Entity, &dyn PartialReflect),
     /// Function pointer implementing [`ReflectComponent::apply_or_insert()`].
-    pub apply_or_insert: fn(&mut World, Entity, &dyn Reflect),
+    pub apply_or_insert: fn(&mut World, Entity, &dyn PartialReflect),
     /// Function pointer implementing [`ReflectComponent::remove()`].
     pub remove: fn(&mut World, Entity),
     /// Function pointer implementing [`ReflectComponent::reflect()`].
-    pub reflect: fn(&World, Entity) -> Option<&dyn Reflect>,
+    pub reflect: fn(&World, Entity) -> Option<&dyn PartialReflect>,
     /// Function pointer implementing [`ReflectComponent::reflect_mut()`].
     ///
     /// # Safety
     /// The function may only be called with an [`UnsafeWorldCell`] that can be used to mutably access the relevant component on the given entity.
-    pub reflect_mut: unsafe fn(UnsafeWorldCell<'_>, Entity) -> Option<Mut<'_, dyn Reflect>>,
+    pub reflect_mut: unsafe fn(UnsafeWorldCell<'_>, Entity) -> Option<Mut<'_, dyn PartialReflect>>,
     /// Function pointer implementing [`ReflectComponent::copy()`].
     pub copy: fn(&World, &mut World, Entity, Entity),
 }
@@ -66,7 +66,7 @@ impl ReflectComponentFns {
     ///
     /// This is useful if you want to start with the default implementation before overriding some
     /// of the functions to create a custom implementation.
-    pub fn new<T: Component + Reflect + FromWorld>() -> Self {
+    pub fn new<T: Component + PartialReflect + FromWorld>() -> Self {
         <ReflectComponent as FromType<T>>::from_type().0
     }
 }
@@ -77,7 +77,7 @@ impl ReflectComponent {
     /// # Panics
     ///
     /// Panics if there is no such entity.
-    pub fn insert(&self, world: &mut World, entity: Entity, component: &dyn Reflect) {
+    pub fn insert(&self, world: &mut World, entity: Entity, component: &dyn PartialReflect) {
         (self.0.insert)(world, entity, component);
     }
 
@@ -86,7 +86,7 @@ impl ReflectComponent {
     /// # Panics
     ///
     /// Panics if there is no [`Component`] of the given type or the `entity` does not exist.
-    pub fn apply(&self, world: &mut World, entity: Entity, component: &dyn Reflect) {
+    pub fn apply(&self, world: &mut World, entity: Entity, component: &dyn PartialReflect) {
         (self.0.apply)(world, entity, component);
     }
 
@@ -95,7 +95,7 @@ impl ReflectComponent {
     /// # Panics
     ///
     /// Panics if the `entity` does not exist.
-    pub fn apply_or_insert(&self, world: &mut World, entity: Entity, component: &dyn Reflect) {
+    pub fn apply_or_insert(&self, world: &mut World, entity: Entity, component: &dyn PartialReflect) {
         (self.0.apply_or_insert)(world, entity, component);
     }
 
@@ -109,7 +109,7 @@ impl ReflectComponent {
     }
 
     /// Gets the value of this [`Component`] type from the entity as a reflected reference.
-    pub fn reflect<'a>(&self, world: &'a World, entity: Entity) -> Option<&'a dyn Reflect> {
+    pub fn reflect<'a>(&self, world: &'a World, entity: Entity) -> Option<&'a dyn PartialReflect> {
         (self.0.reflect)(world, entity)
     }
 
@@ -118,7 +118,7 @@ impl ReflectComponent {
         &self,
         world: &'a mut World,
         entity: Entity,
-    ) -> Option<Mut<'a, dyn Reflect>> {
+    ) -> Option<Mut<'a, dyn PartialReflect>> {
         // SAFETY: unique world access
         unsafe { (self.0.reflect_mut)(world.as_unsafe_world_cell(), entity) }
     }
@@ -132,7 +132,7 @@ impl ReflectComponent {
         &self,
         world: UnsafeWorldCell<'a>,
         entity: Entity,
-    ) -> Option<Mut<'a, dyn Reflect>> {
+    ) -> Option<Mut<'a, dyn PartialReflect>> {
         // SAFETY: safety requirements deferred to caller
         (self.0.reflect_mut)(world, entity)
     }
@@ -173,7 +173,7 @@ impl ReflectComponent {
     }
 }
 
-impl<C: Component + Reflect + FromWorld> FromType<C> for ReflectComponent {
+impl<C: Component + PartialReflect + FromWorld> FromType<C> for ReflectComponent {
     fn from_type() -> Self {
         ReflectComponent(ReflectComponentFns {
             insert: |world, entity, reflected_component| {
@@ -209,7 +209,7 @@ impl<C: Component + Reflect + FromWorld> FromType<C> for ReflectComponent {
                 world
                     .get_entity(entity)?
                     .get::<C>()
-                    .map(|c| c as &dyn Reflect)
+                    .map(|c| c as &dyn PartialReflect)
             },
             reflect_mut: |world, entity| {
                 // SAFETY: reflect_mut is an unsafe function pointer used by
@@ -217,7 +217,7 @@ impl<C: Component + Reflect + FromWorld> FromType<C> for ReflectComponent {
                 // 2. `reflect_mut`, which has mutable world access
                 unsafe {
                     world.get_entity(entity)?.get_mut::<C>().map(|c| Mut {
-                        value: c.value as &mut dyn Reflect,
+                        value: c.value as &mut dyn PartialReflect,
                         ticks: c.ticks,
                     })
                 }
@@ -256,20 +256,20 @@ pub struct ReflectResource(ReflectResourceFns);
 #[derive(Clone)]
 pub struct ReflectResourceFns {
     /// Function pointer implementing [`ReflectResource::insert()`].
-    pub insert: fn(&mut World, &dyn Reflect),
+    pub insert: fn(&mut World, &dyn PartialReflect),
     /// Function pointer implementing [`ReflectResource::apply()`].
-    pub apply: fn(&mut World, &dyn Reflect),
+    pub apply: fn(&mut World, &dyn PartialReflect),
     /// Function pointer implementing [`ReflectResource::apply_or_insert()`].
-    pub apply_or_insert: fn(&mut World, &dyn Reflect),
+    pub apply_or_insert: fn(&mut World, &dyn PartialReflect),
     /// Function pointer implementing [`ReflectResource::remove()`].
     pub remove: fn(&mut World),
     /// Function pointer implementing [`ReflectResource::reflect()`].
-    pub reflect: fn(&World) -> Option<&dyn Reflect>,
+    pub reflect: fn(&World) -> Option<&dyn PartialReflect>,
     /// Function pointer implementing [`ReflectResource::reflect_unchecked_mut()`].
     ///
     /// # Safety
     /// The function may only be called with an [`UnsafeWorldCell`] that can be used to mutably access the relevant resource.
-    pub reflect_unchecked_mut: unsafe fn(UnsafeWorldCell<'_>) -> Option<Mut<'_, dyn Reflect>>,
+    pub reflect_unchecked_mut: unsafe fn(UnsafeWorldCell<'_>) -> Option<Mut<'_, dyn PartialReflect>>,
     /// Function pointer implementing [`ReflectResource::copy()`].
     pub copy: fn(&World, &mut World),
 }
@@ -280,14 +280,14 @@ impl ReflectResourceFns {
     ///
     /// This is useful if you want to start with the default implementation before overriding some
     /// of the functions to create a custom implementation.
-    pub fn new<T: Resource + Reflect + FromWorld>() -> Self {
+    pub fn new<T: Resource + PartialReflect + FromWorld>() -> Self {
         <ReflectResource as FromType<T>>::from_type().0
     }
 }
 
 impl ReflectResource {
     /// Insert a reflected [`Resource`] into the world like [`insert()`](World::insert_resource).
-    pub fn insert(&self, world: &mut World, resource: &dyn Reflect) {
+    pub fn insert(&self, world: &mut World, resource: &dyn PartialReflect) {
         (self.0.insert)(world, resource);
     }
 
@@ -296,12 +296,12 @@ impl ReflectResource {
     /// # Panics
     ///
     /// Panics if there is no [`Resource`] of the given type.
-    pub fn apply(&self, world: &mut World, resource: &dyn Reflect) {
+    pub fn apply(&self, world: &mut World, resource: &dyn PartialReflect) {
         (self.0.apply)(world, resource);
     }
 
     /// Uses reflection to set the value of this [`Resource`] type in the world to the given value or insert a new one if it does not exist.
-    pub fn apply_or_insert(&self, world: &mut World, resource: &dyn Reflect) {
+    pub fn apply_or_insert(&self, world: &mut World, resource: &dyn PartialReflect) {
         (self.0.apply_or_insert)(world, resource);
     }
 
@@ -311,12 +311,12 @@ impl ReflectResource {
     }
 
     /// Gets the value of this [`Resource`] type from the world as a reflected reference.
-    pub fn reflect<'a>(&self, world: &'a World) -> Option<&'a dyn Reflect> {
+    pub fn reflect<'a>(&self, world: &'a World) -> Option<&'a dyn PartialReflect> {
         (self.0.reflect)(world)
     }
 
     /// Gets the value of this [`Resource`] type from the world as a mutable reflected reference.
-    pub fn reflect_mut<'a>(&self, world: &'a mut World) -> Option<Mut<'a, dyn Reflect>> {
+    pub fn reflect_mut<'a>(&self, world: &'a mut World) -> Option<Mut<'a, dyn PartialReflect>> {
         // SAFETY: unique world access
         unsafe { (self.0.reflect_unchecked_mut)(world.as_unsafe_world_cell()) }
     }
@@ -329,7 +329,7 @@ impl ReflectResource {
     pub unsafe fn reflect_unchecked_mut<'w>(
         &self,
         world: UnsafeWorldCell<'w>,
-    ) -> Option<Mut<'w, dyn Reflect>> {
+    ) -> Option<Mut<'w, dyn PartialReflect>> {
         // SAFETY: caller promises to uphold uniqueness guarantees
         (self.0.reflect_unchecked_mut)(world)
     }
@@ -359,7 +359,7 @@ impl ReflectResource {
     }
 }
 
-impl<C: Resource + Reflect + FromWorld> FromType<C> for ReflectResource {
+impl<C: Resource + PartialReflect + FromWorld> FromType<C> for ReflectResource {
     fn from_type() -> Self {
         ReflectResource(ReflectResourceFns {
             insert: |world, reflected_resource| {
@@ -383,13 +383,13 @@ impl<C: Resource + Reflect + FromWorld> FromType<C> for ReflectResource {
             remove: |world| {
                 world.remove_resource::<C>();
             },
-            reflect: |world| world.get_resource::<C>().map(|res| res as &dyn Reflect),
+            reflect: |world| world.get_resource::<C>().map(|res| res as &dyn PartialReflect),
             reflect_unchecked_mut: |world| {
                 // SAFETY: all usages of `reflect_unchecked_mut` guarantee that there is either a single mutable
                 // reference or multiple immutable ones alive at any given point
                 unsafe {
                     world.get_resource_mut::<C>().map(|res| Mut {
-                        value: res.value as &mut dyn Reflect,
+                        value: res.value as &mut dyn PartialReflect,
                         ticks: res.ticks,
                     })
                 }
