@@ -215,8 +215,7 @@ macro_rules! impl_reflect_for_veclike {
         impl<T: Reflect + FromReflect> List for $ty {
             fn insert(&mut self, index: usize, value: Box<dyn PartialReflect>) {
                 let value = value
-                    .into_full()
-                    .and_then(|value| value.take().map_err(|value| value.into_partial_reflect()))
+                    .try_take()
                     .unwrap_or_else(|value| {
                         T::from_reflect(&*value).unwrap_or_else(|| {
                             panic!(
@@ -266,6 +265,18 @@ macro_rules! impl_reflect_for_veclike {
 
             fn into_full(self: Box<Self>) -> Result<Box<dyn Reflect>, Box<dyn PartialReflect>> {
                 Ok(self)
+            }
+
+            fn into_partial(self: Box<Self>) -> Box<dyn PartialReflect> {
+                self
+            }
+
+            fn as_partial(&self) -> &dyn PartialReflect {
+                self
+            }
+
+            fn as_partial_mut(&mut self) -> &mut dyn PartialReflect {
+                self
             }
 
             fn apply(&mut self, value: &dyn PartialReflect) {
@@ -348,18 +359,6 @@ macro_rules! impl_reflect_for_veclike {
             }
 
             fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
-                self
-            }
-
-            fn into_partial_reflect(self: Box<Self>) -> Box<dyn PartialReflect> {
-                self
-            }
-
-            fn as_partial_reflect(&self) -> &dyn PartialReflect {
-                self
-            }
-
-            fn as_partial_reflect_mut(&mut self) -> &mut dyn PartialReflect {
                 self
             }
 
@@ -493,6 +492,19 @@ impl<K: Reflect + FromReflect + Eq + Hash, V: Reflect + FromReflect> PartialRefl
         Ok(self)
     }
 
+    #[inline]
+    fn into_partial(self: Box<Self>) -> Box<dyn PartialReflect> {
+        self
+    }
+
+    fn as_partial(&self) -> &dyn PartialReflect {
+        self
+    }
+
+    fn as_partial_mut(&mut self) -> &mut dyn PartialReflect {
+        self
+    }
+
     fn apply(&mut self, value: &dyn PartialReflect) {
         map_apply(self, value);
     }
@@ -541,19 +553,6 @@ impl<K: Reflect + FromReflect + Eq + Hash, V: Reflect + FromReflect> Reflect for
     }
 
     fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
-        self
-    }
-
-    #[inline]
-    fn into_partial_reflect(self: Box<Self>) -> Box<dyn PartialReflect> {
-        self
-    }
-
-    fn as_partial_reflect(&self) -> &dyn PartialReflect {
-        self
-    }
-
-    fn as_partial_reflect_mut(&mut self) -> &mut dyn PartialReflect {
         self
     }
 
@@ -653,6 +652,21 @@ impl<T: Reflect, const N: usize> PartialReflect for [T; N] {
     }
 
     #[inline]
+    fn into_partial(self: Box<Self>) -> Box<dyn PartialReflect> {
+        self
+    }
+
+    #[inline]
+    fn as_partial(&self) -> &dyn PartialReflect {
+        self
+    }
+
+    #[inline]
+    fn as_partial_mut(&mut self) -> &mut dyn PartialReflect {
+        self
+    }
+
+    #[inline]
     fn apply(&mut self, value: &dyn PartialReflect) {
         crate::array_apply(self, value);
     }
@@ -742,21 +756,6 @@ impl<T: Reflect, const N: usize> Reflect for [T; N] {
 
     #[inline]
     fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
-        self
-    }
-
-    #[inline]
-    fn into_partial_reflect(self: Box<Self>) -> Box<dyn PartialReflect> {
-        self
-    }
-
-    #[inline]
-    fn as_partial_reflect(&self) -> &dyn PartialReflect {
-        self
-    }
-
-    #[inline]
-    fn as_partial_reflect_mut(&mut self) -> &mut dyn PartialReflect {
         self
     }
 
@@ -890,6 +889,19 @@ impl<T: FromReflect> PartialReflect for Option<T> {
     }
 
     #[inline]
+    fn into_partial(self: Box<Self>) -> Box<dyn PartialReflect> {
+        self
+    }
+
+    fn as_partial(&self) -> &dyn PartialReflect {
+        self
+    }
+
+    fn as_partial_mut(&mut self) -> &mut dyn PartialReflect {
+        self
+    }
+
+    #[inline]
     fn apply(&mut self, value: &dyn PartialReflect) {
         if let ReflectRef::Enum(value) = value.reflect_ref() {
             if self.variant_name() == value.variant_name() {
@@ -988,19 +1000,6 @@ impl<T: FromReflect> Reflect for Option<T> {
     }
 
     #[inline]
-    fn into_partial_reflect(self: Box<Self>) -> Box<dyn PartialReflect> {
-        self
-    }
-
-    fn as_partial_reflect(&self) -> &dyn PartialReflect {
-        self
-    }
-
-    fn as_partial_reflect_mut(&mut self) -> &mut dyn PartialReflect {
-        self
-    }
-
-    #[inline]
     fn set(&mut self, value: Box<dyn PartialReflect>) -> Result<(), Box<dyn PartialReflect>> {
         *self = value.try_take()?;
         Ok(())
@@ -1081,6 +1080,18 @@ impl PartialReflect for Cow<'static, str> {
         Ok(self)
     }
 
+    fn as_partial(&self) -> &dyn PartialReflect {
+        self
+    }
+
+    fn as_partial_mut(&mut self) -> &mut dyn PartialReflect {
+        self
+    }
+
+    fn into_partial(self: Box<Self>) -> Box<dyn PartialReflect> {
+        self
+    }
+
     fn apply(&mut self, value: &dyn PartialReflect) {
         if let Some(value) = value
             .as_full()
@@ -1152,18 +1163,6 @@ impl Reflect for Cow<'static, str> {
         self
     }
 
-    fn as_partial_reflect(&self) -> &dyn PartialReflect {
-        self
-    }
-
-    fn as_partial_reflect_mut(&mut self) -> &mut dyn PartialReflect {
-        self
-    }
-
-    fn into_partial_reflect(self: Box<Self>) -> Box<dyn PartialReflect> {
-        self
-    }
-
     fn set(&mut self, value: Box<dyn PartialReflect>) -> Result<(), Box<dyn PartialReflect>> {
         *self = value.try_take()?;
         Ok(())
@@ -1217,6 +1216,18 @@ impl PartialReflect for &'static Path {
 
     fn into_full(self: Box<Self>) -> Result<Box<dyn Reflect>, Box<dyn PartialReflect>> {
         Ok(self)
+    }
+
+    fn as_partial(&self) -> &dyn PartialReflect {
+        self
+    }
+
+    fn as_partial_mut(&mut self) -> &mut dyn PartialReflect {
+        self
+    }
+
+    fn into_partial(self: Box<Self>) -> Box<dyn PartialReflect> {
+        self
     }
 
     fn apply(&mut self, value: &dyn PartialReflect) {
@@ -1287,18 +1298,6 @@ impl Reflect for &'static Path {
     }
 
     fn into_reflect(self: Box<Self>) -> Box<dyn Reflect> {
-        self
-    }
-
-    fn as_partial_reflect(&self) -> &dyn PartialReflect {
-        self
-    }
-
-    fn as_partial_reflect_mut(&mut self) -> &mut dyn PartialReflect {
-        self
-    }
-
-    fn into_partial_reflect(self: Box<Self>) -> Box<dyn PartialReflect> {
         self
     }
 
