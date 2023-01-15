@@ -35,7 +35,7 @@ pub(crate) fn impl_value(meta: &ReflectMeta) -> TokenStream {
 
     let get_type_registration_impl = meta.get_type_registration();
 
-    let impl_full_reflect = impl_full_reflect(&meta);
+    let impl_full_reflect = impl_full_reflect(meta);
 
     let (impl_generics, ty_generics, where_clause) = meta.generics().split_for_impl();
 
@@ -68,15 +68,15 @@ pub(crate) fn impl_value(meta: &ReflectMeta) -> TokenStream {
             fn into_full(self: Box<Self>) -> #FQResult<Box<dyn #bevy_reflect_path::Reflect>, Box<dyn #bevy_reflect_path::PartialReflect>> {
                 Ok(self)
             }
-    
+
             fn as_partial(&self) -> &dyn #bevy_reflect_path::PartialReflect {
                 self
             }
-            
+
             fn as_partial_mut(&mut self) -> &mut dyn #bevy_reflect_path::PartialReflect {
                 self
             }
-            
+
             fn into_partial(self: #FQBox<Self>) -> #FQBox<dyn #bevy_reflect_path::PartialReflect> {
                 self
             }
