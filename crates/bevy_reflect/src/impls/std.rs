@@ -139,20 +139,70 @@ impl_reflect_value!(OsString(Debug, Hash, PartialEq));
 
 impl_from_reflect_value!(bool);
 impl_from_reflect_value!(char);
-impl_from_reflect_value!(u8);
-impl_from_reflect_value!(u16);
-impl_from_reflect_value!(u32);
-impl_from_reflect_value!(u64);
-impl_from_reflect_value!(u128);
-impl_from_reflect_value!(usize);
-impl_from_reflect_value!(i8);
-impl_from_reflect_value!(i16);
-impl_from_reflect_value!(i32);
-impl_from_reflect_value!(i64);
-impl_from_reflect_value!(i128);
-impl_from_reflect_value!(isize);
+
+macro_rules! impl_casting_from_reflect {
+    ($(
+        $before: ident $(:: $bf_method: ident)?)*
+        ($name: ident)
+        $($after: ident $(:: $af_method: ident)?)*
+    ) => {
+        impl FromReflect for $name {
+            fn from_reflect(reflect: &dyn Reflect) -> Option<Self> {
+                if let Some(value) = reflect.downcast_ref::<Self>() {
+                    return Some(value.clone());
+                };
+                $(
+                    if let Some(downcasted) = reflect.downcast_ref::<$before>() {
+                        if let Ok(value) = Self::try_from(
+                            downcasted.clone()$(.$bf_method())?
+                        ) {
+                            return Some(value);
+                        }
+                    }
+                )*
+                $(
+                    if let Some(downcasted) = reflect.downcast_ref::<$after>() {
+                        if let Ok(value) = Self::try_from(
+                            downcasted.clone()$(.$af_method())?
+                        ) {
+                            return Some(value);
+                        }
+                    }
+                )*
+                None
+            }
+        }
+    };
+}
+
+impl_casting_from_reflect!((usize) isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize (isize) u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize (u128) i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 (i128) u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 (u64) i64 u32 i32 u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 (i64) u32 i32 u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 (u32) i32 u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 (i32) u16 i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 (u16) i16 u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 (i16) u8 i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 (u8) i8 NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 (i8) NonZeroUsize::get NonZeroIsize::get NonZeroU128::get NonZeroI128::get NonZeroU64::get NonZeroI64::get NonZeroU32::get NonZeroI32::get NonZeroU16::get NonZeroI16::get NonZeroU8::get NonZeroI8::get);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 (NonZeroUsize) NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize (NonZeroIsize) NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize (NonZeroU128) NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 (NonZeroI128) NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 (NonZeroU64) NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 (NonZeroI64) NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 (NonZeroU32) NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 (NonZeroI32) NonZeroU16 NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 (NonZeroU16) NonZeroI16 NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 (NonZeroI16) NonZeroU8 NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 (NonZeroU8) NonZeroI8);
+impl_casting_from_reflect!(usize isize u128 i128 u64 i64 u32 i32 u16 i16 u8 i8 NonZeroUsize NonZeroIsize NonZeroU128 NonZeroI128 NonZeroU64 NonZeroI64 NonZeroU32 NonZeroI32 NonZeroU16 NonZeroI16 NonZeroU8 (NonZeroI8));
+
 impl_from_reflect_value!(f32);
 impl_from_reflect_value!(f64);
+
 impl_from_reflect_value!(String);
 impl_from_reflect_value!(PathBuf);
 impl_from_reflect_value!(OsString);
@@ -165,18 +215,6 @@ impl_from_reflect_value!(RangeToInclusive<T: Clone + Send + Sync + 'static>);
 impl_from_reflect_value!(RangeFull);
 impl_from_reflect_value!(Duration);
 impl_from_reflect_value!(Instant);
-impl_from_reflect_value!(NonZeroI128);
-impl_from_reflect_value!(NonZeroU128);
-impl_from_reflect_value!(NonZeroIsize);
-impl_from_reflect_value!(NonZeroUsize);
-impl_from_reflect_value!(NonZeroI64);
-impl_from_reflect_value!(NonZeroU64);
-impl_from_reflect_value!(NonZeroU32);
-impl_from_reflect_value!(NonZeroI32);
-impl_from_reflect_value!(NonZeroI16);
-impl_from_reflect_value!(NonZeroU16);
-impl_from_reflect_value!(NonZeroU8);
-impl_from_reflect_value!(NonZeroI8);
 
 macro_rules! impl_reflect_for_veclike {
     ($ty:ty, $insert:expr, $remove:expr, $push:expr, $pop:expr, $sub:ty) => {
