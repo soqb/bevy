@@ -275,7 +275,8 @@ pub struct ReflectResourceFns {
     ///
     /// # Safety
     /// The function may only be called with an [`UnsafeWorldCell`] that can be used to mutably access the relevant resource.
-    pub reflect_unchecked_mut: unsafe fn(UnsafeWorldCell<'_>) -> Option<Mut<'_, dyn PartialReflect>>,
+    pub reflect_unchecked_mut:
+        unsafe fn(UnsafeWorldCell<'_>) -> Option<Mut<'_, dyn PartialReflect>>,
     /// Function pointer implementing [`ReflectResource::copy()`].
     pub copy: fn(&World, &mut World),
 }
